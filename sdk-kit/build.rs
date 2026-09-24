@@ -62,7 +62,18 @@ END
             .arg(&rc_path)
             .status()
     } else {
-        Command::new("windres")
+        // dtb-ke patch (see /vendor/README.md and RUNNERS.md): upstream used
+        // a bare "windres" here, which resolves to whatever copy is first
+        // on PATH — correct by coincidence for a native build, wrong when
+        // cross-compiling to a different architecture than the host (no
+        // CARGO_CFG_TARGET_ARCH check, no target-triple prefix, anywhere in
+        // this file). llvm-mingw (and mingw-w64 generally) ships each
+        // architecture's windres under its target-triple-prefixed name, so
+        // use that instead of the ambiguous bare one.
+        let arch = env::var("CARGO_CFG_TARGET_ARCH")
+            .expect("CARGO_CFG_TARGET_ARCH is set by Cargo for any build script");
+        let windres = format!("{arch}-w64-mingw32-windres");
+        Command::new(&windres)
             .arg(&rc_path)
             .arg("-O")
             .arg("coff")
